@@ -54,6 +54,8 @@
 #include <filter2d_sds.h>
 #endif
 
+#include "object_int.h"
+
 #define F2D_BYTES_PER_PIXEL	2
 
 /* Forward declaration */
@@ -246,9 +248,13 @@ static void filter2d_func(struct filter_s *fs,
 		   int height_in, int width_in, int stride_in,
 		   int height_out, int width_out, int stride_out)
 {
+
+	int pix_stride_in = stride_in / F2D_BYTES_PER_PIXEL;
+
 	if (fs->mode >= fs->num_modes) {
 		return;
 	}
+
 
 	switch (fs->mode) {
 	case 0:
@@ -259,8 +265,10 @@ static void filter2d_func(struct filter_s *fs,
 	case 1:
 #endif
 	default:
-		filter2d_cv(frm_data_in, frm_data_out, height_in, width_in,
-			    coeff_cur);
+		//filter2d_cv(frm_data_in, frm_data_out, height_in, width_in,
+		//	    coeff_cur);
+		object_detection(frm_data_in, frm_data_out, height_in, width_in, pix_stride_in);
+
 		break;
 	}
 }
