@@ -29,6 +29,12 @@
 #include "hash_chain.hpp"
 #include <cmath>
 #include <cassert>
+#include <yolo_lib.h>
+
+#ifdef WITH_SDSOC
+#include <filter2d_sds.h>
+#endif
+
 using namespace cv;
 using namespace std;
 static float colors[6][3] = { {1,0,1}, {0,0,1},{0,1,1},{0,1,0},{1,1,0},{1,0,0} };
@@ -71,18 +77,12 @@ static IMAGE_DATA *resized_image_data(IMAGE_DATA *ori_image)
 	return new_image;
 }
 
-
-static THE_PREDICTED_DATA *hw_cnn_network(INFER_CONTROLLER *infer)
+static THE_PREDICTED_DATA *pure_post_processing(void)
 {
-
-
-#if (PURE_POST_PROCESSING)
 	int fd;
 	int nr;
 	THE_PREDICTED_DATA *predict_data = new THE_PREDICTED_DATA();
-#endif
 
-#if (PURE_POST_PROCESSING)
 
 	unsigned char *raw_data = new unsigned char[PREDICT_CUBE_SIZE];
 	predict_data->data = (RAW_DATA_LAYOUT *)raw_data;
@@ -91,7 +91,7 @@ static THE_PREDICTED_DATA *hw_cnn_network(INFER_CONTROLLER *infer)
 	predict_data->d = PREDICT_CUBE_DEPTH;
 
 #if SIMULATE
-	fd = open("../src/resource/prediction_cube.bin", O_RDONLY, S_IRUSR | S_IWUSR);
+	fd = open("src/resource/prediction_cube.bin", O_RDONLY, S_IRUSR | S_IWUSR);
 #else
 	fd = open("/media/card/prediction_cube.bin", O_RDONLY, S_IRUSR | S_IWUSR);
 #endif
@@ -101,10 +101,60 @@ static THE_PREDICTED_DATA *hw_cnn_network(INFER_CONTROLLER *infer)
 		dector_printf("predict_cube read error: %s\n", strerror(errno));
 		return NULL;
 	}
-#endif
-
 	close(fd);
 	return predict_data;
+}
+
+static IMAGE_DATA *data2image(unsigned char *f, unsigned w, unsigned h, unsigned c, char *filename){
+	IMAGE_DATA *image = new IMAGE_DATA;
+	image->data = f;
+	image->height = h;
+	image->width = w;
+	image->channel = c;
+	strncpy(image->filename, filename, 256);
+	return image;
+}
+
+static INFER_CONTROLLER *get_infer_con(IMAGE_DATA *im , THE_WEIGHT *w, INFER_TYPE type)
+{
+	INFER_CONTROLLER *infer = new INFER_CONTROLLER;
+	infer->input = im;
+	infer->type = type;
+	infer->weight= w;
+
+	return infer;
+}
+
+
+static THE_PREDICTED_DATA *YOLO_SW_inference(INFER_CONTROLLER *infer)
+{
+
+	float *infered_data;
+	THE_PREDICTED_DATA *predict_data = new THE_PREDICTED_DATA();
+	set_cur_img_by_name(infer->input->filename);
+	infered_data = yolo_inference(BOX_THRESH);
+
+	predict_data->data = (RAW_DATA_LAYOUT *)infered_data;
+	predict_data->w = PREDICT_CUBE_WIDTH;
+	predict_data->h = PREDICT_CUBE_HEIGHT;
+	predict_data->d = PREDICT_CUBE_DEPTH;
+	return predict_data;
+}
+
+
+static THE_PREDICTED_DATA *hw_cnn_network(INFER_CONTROLLER *infer)
+{
+	switch (infer->type)
+	{
+		case PRE_BUILD_CUBE:
+			return pure_post_processing();
+		case YOLO_SW_INFERENCE:
+			return YOLO_SW_inference(infer);
+		default:
+			dector_printf(" unexpected inference type\n");
+			return NULL;
+	}
+
 }
 
 static void dump_the_box(THE_BOX &b)
@@ -181,56 +231,62 @@ static int boxes_projection(list<THE_BOX> &box_list)
 
 
 static int video_mode_processing(unsigned short *frm_data_in, unsigned short *frm_data_out,
-		 int height, int width, int stride)
+		 int height, int width, int stride, INFER_TYPE type, char *filename)
 {
 
 
 
-	dector_printf("Pure post processing mode...\n");
+	dector_printf("video processing mode...\n");
 	Mat image;
 	Mat rgb_image;
 	THE_PREDICTED_DATA *predict_data;
 	list<THE_BOX> drawing_box_list;
+	INFER_CONTROLLER *infer;
 
-#if (SIMULATE)
-	image = imread("../src/resource/dog.jpg",CV_LOAD_IMAGE_COLOR);
-#else
-	//image = imread("/media/card/dog416.jpg",CV_LOAD_IMAGE_COLOR);
-	image = imread("/media/card/dog.jpg",CV_LOAD_IMAGE_COLOR);
-#endif
+	image = imread(filename,CV_LOAD_IMAGE_COLOR);
+
 	if(! image.data )
     {
            dector_printf("Could not open or find the image\n");
            return -1;
     }
-#if (SIMULATE)
-	predict_data = hw_cnn_network(NULL);
-	post_process(predict_data, drawing_box_list);
-	draw_the_boxes_sim(image, drawing_box_list);
 
-#else
-	predict_data = hw_cnn_network(NULL);
+	if(type == PRE_BUILD_CUBE)
+	{
+		infer = get_infer_con(NULL , NULL , type);
+	}
+	else
+	{
+		IMAGE_DATA *im = data2image(NULL,0,0,0, filename);
+		infer = get_infer_con(im , NULL , type);
+	}
+	predict_data = hw_cnn_network(infer);
 	if (!predict_data)
 		return 0;
 	post_process(predict_data, drawing_box_list);
 	draw_the_boxes_sim(image, drawing_box_list);
+
+
+/*On ZCU102 platform, We need to convert image to YUYV for monitor */
+#if (!SIMULATE)
 	cvtColor(image, rgb_image, COLOR_BGR2RGB);
 	Mat dst(height, width, CV_8UC2, frm_data_out, stride);
 	rgb2yuv422(&rgb_image, &dst);
-#endif
-
 	image.release();
 	rgb_image.release();
-
+#endif
 	return 0;
 }
 
-int object_detection(unsigned short *frm_data_in, unsigned short *frm_data_out,
-		 int height, int width, int stride)
+
+int object_detection_camera(unsigned short *frm_data_in, unsigned short *frm_data_out,
+		 int height, int width, int stride, INFER_TYPE type, void **priv)
 {
 	unsigned short *tmp;
 	int ret = 0;
 
+	do_resize(frm_data_in,frm_data_out, height, width, RESIZED_WIDTH, RESIZED_HEIGHT, priv);
+/*
 	list<THE_WEIGHT> weights_list;
 	list <THE_BOX> drawing_box_list;
 	IMAGE_DATA *ori_image;
@@ -238,19 +294,28 @@ int object_detection(unsigned short *frm_data_in, unsigned short *frm_data_out,
 	INFER_CONTROLLER *infer_controller;
 	THE_PREDICTED_DATA *the_predicted_data;
 
-#if (DEMO_MODE)
 	ori_image = alloc_image_data(frm_data_in, (width*height), width, height, RAW_IMAGE_CHANNEL);
+
 	new_image = resized_image_data(ori_image);
 	ret = get_the_weights(weights_list);
 	infer_controller = alloc_infer_controller(new_image, weights_list);
 	the_predicted_data = hw_cnn_network(infer_controller);
 	ret |= post_process(the_predicted_data, drawing_box_list);
 	ret |= boxes_projection(drawing_box_list);
-#elif (PURE_POST_PROCESSING)
-	ret |= video_mode_processing(frm_data_in, frm_data_out, height, width, stride);
-#else
-	ret |= draw_the_boxes(frm_data_in, frm_data_out, height, width, stride, drawing_box_list);
-#endif
+
+	if(ret)
+		return -1;
+	else
+		return 0;
+*/
+}
+
+int object_detection_video(unsigned short *frm_data_in, unsigned short *frm_data_out,
+		 int height, int width, int stride, INFER_TYPE type, char *filename)
+{
+	int ret = 0;
+
+	ret |= video_mode_processing(frm_data_in, frm_data_out, height, width, stride, type ,filename);
 
 	if(ret)
 		return -1;

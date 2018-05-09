@@ -55,6 +55,7 @@
 #endif
 
 #include "object_int.h"
+#include <yolo_lib.h>
 
 #define F2D_BYTES_PER_PIXEL	2
 
@@ -240,6 +241,9 @@ static int filter2d_init(struct filter_s *fs, const struct filter_init_data *fid
 			  &fs->data);
 #endif
 
+
+	setup_yolo_env(CFG_FILE, WEIGHT_FILE);
+
 	return 0;
 }
 
@@ -267,8 +271,11 @@ static void filter2d_func(struct filter_s *fs,
 	default:
 		//filter2d_cv(frm_data_in, frm_data_out, height_in, width_in,
 		//	    coeff_cur);
-		object_detection(frm_data_in, frm_data_out, height_in, width_in, pix_stride_in);
-
+		//object_detection(frm_data_in, frm_data_out, height_in, width_in, pix_stride_in);
+		object_detection_video(NULL,frm_data_out,INPUT_COL_PIXEL,INPUT_RAW_PIXEL, pix_stride_in,
+				YOLO_SW_INFERENCE, "/media/card/dog.jpg");
+//		object_detection_video(NULL,frm_data_out,INPUT_COL_PIXEL,INPUT_RAW_PIXEL, pix_stride_in,
+//				PRE_BUILD_CUBE, "/media/card/dog.jpg");
 		break;
 	}
 }

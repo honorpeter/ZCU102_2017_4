@@ -7,10 +7,11 @@
 #define RAW_IMAGE_SIZE		0
 #define WEIGHT_CNT			-1
 #define CLASS_CNT			20
-#define PURE_POST_PROCESSING 1
-#define DEMO_MODE	0
-
 #define SIMULATE (0)
+
+/*Applicatoin layer defines*/
+#define PURE_POST_PROCESSING (0)
+#define YOLO_INFERENCE (1)
 
 
 #define INPUT_SIZE	(INPUT_RAW_PIXEL*INPUT_COL_PIXEL)
@@ -83,28 +84,27 @@ typedef struct the_predicted_data
 	unsigned int h;
 	unsigned int d;
 }THE_PREDICTED_DATA;
-
 typedef struct the_weight
 {
 	float *weight;
 	unsigned int len;
-	unsigned int layer;
 }THE_WEIGHT;
 
 typedef struct image_data
 {
-	unsigned short *data;
-	unsigned int len;
+	unsigned char *data;
 	unsigned int width;
 	unsigned int height;
 	unsigned int channel;
+	char filename[256];
 }IMAGE_DATA;
+
 
 typedef struct infer_controller
 {
 	IMAGE_DATA *input;
-	std::list<THE_WEIGHT> *weight_list;
-	unsigned int cnt_weight;
+	THE_WEIGHT *weight;
+	INFER_TYPE type;
 }INFER_CONTROLLER;
 
 

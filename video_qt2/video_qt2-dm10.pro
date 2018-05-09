@@ -13,7 +13,8 @@ INCLUDEPATH += \
 	../plugins/legacy/$$PLUGIN2/include \
 	../$$SDSOC_ACCEL/src/src_of \
 	../$$SDSOC_ACCEL/src/src_f2d \
-	../perfapm-client/perfapm-client/include
+	../perfapm-client/perfapm-client/include \
+	../YOLO_lib/inc
 
 QMAKE_LIBDIR_FLAGS += \
 	-L../plugins/legacy/$$PLUGIN1/Release \
@@ -23,7 +24,9 @@ QMAKE_LIBDIR_FLAGS += \
 	-L../$$SDSOC_ACCEL/Release \
 	-L../$$SDSOC_ACCEL/Debug \
 	-L../perfapm-client/perfapm-client/Release \
-	-L../perfapm-client/perfapm-client/Debug
+	-L../perfapm-client/perfapm-client/Debug \
+	-L../YOLO_lib/Debug \
+	-L../YOLO_lib/Release
 
 LIBS += \
 	-l$$PLUGIN1 \
@@ -34,7 +37,8 @@ LIBS += \
 	-lopencv_imgcodecs \ 
 	-lopencv_features2d \
 	-lopencv_calib3d \
-	-lopencv_flann
+	-lopencv_flann \
+	-lYOLO_lib
 
 DEFINES += \
 	SAMPLE_FILTER2D \
