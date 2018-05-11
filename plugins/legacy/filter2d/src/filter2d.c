@@ -272,10 +272,12 @@ static void filter2d_func(struct filter_s *fs,
 		//filter2d_cv(frm_data_in, frm_data_out, height_in, width_in,
 		//	    coeff_cur);
 		//object_detection(frm_data_in, frm_data_out, height_in, width_in, pix_stride_in);
-		object_detection_video(NULL,frm_data_out,INPUT_COL_PIXEL,INPUT_RAW_PIXEL, pix_stride_in,
-				YOLO_SW_INFERENCE, "/media/card/dog.jpg");
+//		object_detection_video(NULL,frm_data_out,INPUT_COL_PIXEL,INPUT_RAW_PIXEL, pix_stride_in,
+//				YOLO_SW_INFERENCE, "/media/card/dog.jpg");
 //		object_detection_video(NULL,frm_data_out,INPUT_COL_PIXEL,INPUT_RAW_PIXEL, pix_stride_in,
 //				PRE_BUILD_CUBE, "/media/card/dog.jpg");
+		object_detection_camera(frm_data_in,frm_data_out,INPUT_COL_PIXEL,INPUT_RAW_PIXEL, pix_stride_in,
+				YOLO_SW_INFERENCE, fs->data);
 		break;
 	}
 }

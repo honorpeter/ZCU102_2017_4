@@ -280,11 +280,12 @@ static int video_mode_processing(unsigned short *frm_data_in, unsigned short *fr
 
 
 int object_detection_camera(unsigned short *frm_data_in, unsigned short *frm_data_out,
-		 int height, int width, int stride, INFER_TYPE type, void **priv)
+		 int height, int width, int stride, INFER_TYPE type, void *priv)
 {
 	unsigned short *tmp;
 	int ret = 0;
 
+	dector_printf("camera processing mode...\n");
 	do_resize(frm_data_in,frm_data_out, height, width, RESIZED_WIDTH, RESIZED_HEIGHT, priv);
 /*
 	list<THE_WEIGHT> weights_list;
