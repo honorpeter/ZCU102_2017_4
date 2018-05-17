@@ -111,7 +111,7 @@ void write_f2d_output(xf::Mat<XF_8UC1, F2D_HEIGHT, F2D_WIDTH, XF_NPPC1> &outLuma
 	unsigned short chromashift = (V4L2_PIX_FMT_YUYV==out_fourcc)? 8 : 0;
 
 	for(int i=0; i<pcnt; i++){
-#pragma HLS pipeline II=1
+		#pragma HLS pipeline II=1
 		ap_uint<8> ypix = outLuma.data[i];
 		ap_uint<8> uvpix = inoutUV.data[i];
 		unsigned short yuvpix = ((unsigned short) uvpix << chromashift) | ((unsigned short) ypix << lumashift);
@@ -119,7 +119,7 @@ void write_f2d_output(xf::Mat<XF_8UC1, F2D_HEIGHT, F2D_WIDTH, XF_NPPC1> &outLuma
 	}
 }
 
-#if 1
+
 #pragma SDS data buffer_depth("inoutUV.data":32768)
 #pragma SDS data mem_attribute("inoutUV.data":NON_CACHEABLE|PHYSICAL_CONTIGUOUS)
 #pragma SDS data copy("inoutUV.data"[0:"inoutUV.size"])
@@ -130,39 +130,35 @@ void write_f2d_output(xf::Mat<XF_8UC1, F2D_HEIGHT, F2D_WIDTH, XF_NPPC1> &outLuma
 #pragma SDS data mem_attribute(frm_data_out:NON_CACHEABLE|PHYSICAL_CONTIGUOUS)
 #pragma SDS data zero_copy(frm_data_out[0:pcnt])
 #pragma SDS data access_pattern(frm_data_out:SEQUENTIAL)
-void write_yuyv_resized_output(xf::Mat<XF_8UC1, RESIZED_HEIGHT, RESIZED_WIDTH, XF_NPPC1> &outLuma,
+void write_resized_output(xf::Mat<XF_8UC1, RESIZED_HEIGHT, RESIZED_WIDTH, XF_NPPC1> &outLuma,
 		      xf::Mat<XF_8UC1, RESIZED_HEIGHT, RESIZED_WIDTH, XF_NPPC1> &inoutUV,
-		      unsigned short *frm_data_out, uint32_t out_fourcc)
+		      unsigned short *frm_data_out, int pcnt)
 {
+	unsigned short lumashift = 0;
+	unsigned short chromashift = 8;
+	unsigned int count;
 
-	unsigned int base;
-	unsigned int n_row;
-	unsigned int n_col;
-	unsigned short lumashift = (V4L2_PIX_FMT_YUYV==out_fourcc)? 0 : 8;
-	unsigned short chromashift = (V4L2_PIX_FMT_YUYV==out_fourcc)? 8 : 0;
-	unsigned int out_index = 0;
-
-	base = OUTPUT_LOCATION_X * (F2D_WIDTH << 1) + (OUTPUT_LOCATION_Y << 1);
-	out_index = base;
-	frm_data_out = frm_data_out + base;
-
-	for (n_row = 0; n_row < RESIZED_HEIGHT; n_row++)
-	{
-		out_index = out_index + n_row * (F2D_WIDTH >> 1);
-
-		for(n_col = 0; n_col < RESIZED_WIDTH; n_col+=1)
+	for(int i=0; i<pcnt; i++){
+		#pragma HLS pipeline II=1
+		if(count == RESIZED_WIDTH * RESIZED_HEIGHT)
 		{
-			unsigned int offset = n_row*(RESIZED_WIDTH) + n_col;
-			ap_uint<8> ypix = outLuma.data[offset];
-			ap_uint<8> uvpix = inoutUV.data[offset];
-			unsigned short yuvpix = ((unsigned short) uvpix << chromashift) | ((unsigned short) ypix << lumashift);
-			frm_data_out[out_index] = yuvpix;
-			out_index++;
+			return;
 		}
+
+		if(i % RESIZED_WIDTH == 0)
+		{
+			i = i + (i/RESIZED_WIDTH)*RESIZED_WIDTH;
+		}
+		ap_uint<8> ypix = outLuma.data[i];
+		ap_uint<8> uvpix = inoutUV.data[i];
+		unsigned short yuvpix = ((unsigned short) uvpix << chromashift) | ((unsigned short) ypix << lumashift);
+		frm_data_out[i] = yuvpix;
+		count++;
+
 	}
 
 }
-#endif
+
 
 int filter2d_init_sds(size_t in_height, size_t in_width, size_t out_height,
 		      size_t out_width, uint32_t in_fourcc,
@@ -201,7 +197,7 @@ void filter2d_sds(unsigned short *frm_data_in, unsigned short *frm_data_out,
 	// combine separate 8b YYYY... and 8b UVUV... data into 16b YUYV... output data
 	write_f2d_output(*f2d->outLuma, *f2d->inoutUV, frm_data_out, f2d->out_fourcc, pcnt);
 }
-#if 1
+
 /* Interpolation type*/
 #define INTERPOLATION   2
 // 0 - Nearest Neighbor Interpolation
@@ -216,7 +212,6 @@ void resize_accel_sds(xf::Mat<XF_8UC1, F2D_HEIGHT, F2D_WIDTH, XF_NPPC1> &_src, x
 
 
 
-#if 0
 void do_resize(unsigned short *frm_data_in, unsigned short *frm_data_out,int in_height, int in_width, int out_height, int out_width, void *priv)
 {
 
@@ -234,13 +229,13 @@ void do_resize(unsigned short *frm_data_in, unsigned short *frm_data_out,int in_
 	read_f2d_input(frm_data_in, *f2d->inLuma, *f2d->inoutUV, V4L2_PIX_FMT_YUYV, pcnt);
 	resize_accel_sds(*f2d->inLuma,*resized_luma);
 	resize_accel_sds(*f2d->inoutUV,*resized_chroma);
-	write_yuyv_resized_output(*resized_luma, *resized_chroma, frm_data_out, V4L2_PIX_FMT_YUYV);
-
-
+	//write_yuyv_resized_output(*resized_luma, *resized_chroma, frm_data_out, V4L2_PIX_FMT_YUYV, rpcnt);
+	//write_f2d_output(*resized_luma, *resized_chroma, frm_data_out, 0x5a5a,pcnt);
+	write_resized_output(*resized_luma, *resized_chroma, frm_data_out, pcnt);
 }
-#endif
 
-#endif
+
+
 
 
 
