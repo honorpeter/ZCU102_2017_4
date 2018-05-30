@@ -18,8 +18,14 @@ typedef enum
 	YOLO_SW_INFERENCE
 }INFER_TYPE;
 
-#define CFG_FILE "/media/card/yolo-tiny_v1.cfg"
-#define WEIGHT_FILE "/media/card/yolo-tiny_v1.weights"
+//#define CFG_FILE "/media/card/yolo-tiny_v1.cfg"
+//#define WEIGHT_FILE "/media/card/yolo-tiny_v1.weights"
+
+#define CFG_FILE "/media/card/resource/tiny-yolo.cfg"
+#define WEIGHT_FILE "/media/card/resource/tiny-yolo.weights"
+
+//#define CFG_FILE "/media/card/resource/tiny-yolo-xnor.cfg"
+//#define WEIGHT_FILE "/media/card/resource/tiny-yolo-xnor.weight"
 
 int object_detection_video(unsigned short *frm_data_in, unsigned short *frm_data_out,
 		 int height, int width, int stride, INFER_TYPE type,  char *filename);

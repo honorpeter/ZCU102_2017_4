@@ -247,6 +247,8 @@ static int filter2d_init(struct filter_s *fs, const struct filter_init_data *fid
 	return 0;
 }
 
+
+static int round;
 static void filter2d_func(struct filter_s *fs,
 		   unsigned short *frm_data_in, unsigned short *frm_data_out,
 		   int height_in, int width_in, int stride_in,
@@ -276,8 +278,10 @@ static void filter2d_func(struct filter_s *fs,
 //				YOLO_SW_INFERENCE, "/media/card/dog.jpg");
 //		object_detection_video(NULL,frm_data_out,INPUT_COL_PIXEL,INPUT_RAW_PIXEL, pix_stride_in,
 //				PRE_BUILD_CUBE, "/media/card/dog.jpg");
-		object_detection_camera(frm_data_in,frm_data_out,INPUT_COL_PIXEL,INPUT_RAW_PIXEL, pix_stride_in,
-				YOLO_SW_INFERENCE, fs->data);
+//		object_detection_camera(frm_data_in,frm_data_out,INPUT_COL_PIXEL,INPUT_RAW_PIXEL, pix_stride_in,
+//				YOLO_SW_INFERENCE, fs->data);
+			yolo_inference_with_ptr(frm_data_in, 1920, 1020, 2, 0.2, frm_data_out);
+
 		break;
 	}
 }
