@@ -280,7 +280,7 @@ static void filter2d_func(struct filter_s *fs,
 //				PRE_BUILD_CUBE, "/media/card/dog.jpg");
 //		object_detection_camera(frm_data_in,frm_data_out,INPUT_COL_PIXEL,INPUT_RAW_PIXEL, pix_stride_in,
 //				YOLO_SW_INFERENCE, fs->data);
-			yolo_inference_with_ptr(frm_data_in, 1920, 1020, 2, 0.2, frm_data_out);
+			yolo_inference_with_ptr(frm_data_in, 1920, 1080, 2, 0.2, frm_data_out);
 
 		break;
 	}
